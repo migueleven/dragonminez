@@ -2,6 +2,7 @@ package com.dragonminez.client.events;
 
 import com.dragonminez.Reference;
 import com.dragonminez.client.flight.FlightSoundInstance;
+import com.dragonminez.client.gui.TrainingScreen;
 import com.dragonminez.client.gui.hud.ScouterHUD;
 import com.dragonminez.client.util.ColorUtils;
 import com.dragonminez.client.util.KeyBinds;
@@ -10,6 +11,7 @@ import com.dragonminez.common.network.C2S.*;
 import com.dragonminez.common.network.NetworkHandler;
 import com.dragonminez.common.stats.*;
 import com.dragonminez.common.stats.Character;
+import com.dragonminez.common.util.lists.SaiyanForms;
 import com.dragonminez.server.events.players.StatsEvents;
 import com.dragonminez.server.util.GravityLogic;
 import net.minecraft.client.Minecraft;
@@ -19,19 +21,24 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ComputeFovModifierEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.Objects;
+
 @Mod.EventBusSubscriber(modid = Reference.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class ClientStatsEvents {
 	private static FlightSoundInstance flightSound;
 
 	private static int transformDoubleTapTimer = 0;
+	private static int kiChargeDoubleTapTimer = 0;
 	private static int kiBlastTimer = 0;
 	private static boolean wasTransformKeyDown = false;
+	private static boolean wasKiChargeKeyDown = false;
 	private static long lastDashTime = 0;
 	private static boolean wasDashKeyDown = false;
 	private static boolean wasRightClickDown = false;
@@ -43,7 +50,7 @@ public class ClientStatsEvents {
 		if (!ConfigManager.getServerConfig().getCombat().getEnableComboAttacks()) return;
 
 		StatsProvider.get(StatsCapability.INSTANCE, Minecraft.getInstance().player).ifPresent(data -> {
-			if (!data.getStatus().hasCreatedCharacter()) return;
+			if (!data.getStatus().isHasCreatedCharacter()) return;
 			if (data.getStatus().isStunned()) return;
 			if (data.getCooldowns().hasCooldown(Cooldowns.COMBO_ATTACK_CD)) return;
 
@@ -66,7 +73,7 @@ public class ClientStatsEvents {
 		if (player == null || mc.screen != null) return;
 
 		StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(data -> {
-			if (!data.getStatus().hasCreatedCharacter()) return;
+			if (!data.getStatus().isHasCreatedCharacter()) return;
 			Character character = data.getCharacter();
 
 			boolean isStunned = data.getStatus().isStunned();
@@ -120,11 +127,17 @@ public class ClientStatsEvents {
 				if (transformDoubleTapTimer > 0) {
 					NetworkHandler.sendToServer(new ExecuteActionC2S(ExecuteActionC2S.ActionType.INSTANT_TRANSFORM));
 					transformDoubleTapTimer = 0;
-				} else {
-					transformDoubleTapTimer = 20;
-				}
+				} else transformDoubleTapTimer = 10;
 			}
 			wasTransformKeyDown = isActionKeyPressed;
+
+			if (isKiChargeKeyPressed && !wasKiChargeKeyDown) {
+				if (kiChargeDoubleTapTimer > 0) {
+					NetworkHandler.sendToServer(new ExecuteActionC2S(ExecuteActionC2S.ActionType.INSTANT_RELEASE));
+					kiChargeDoubleTapTimer = 0;
+				} else kiChargeDoubleTapTimer = 10;
+			}
+			wasKiChargeKeyDown = isKiChargeKeyPressed;
 
 			if (isKiChargeKeyPressed != data.getStatus().isChargingKi()) {
 				NetworkHandler.sendToServer(new UpdateStatC2S(UpdateStatC2S.StatAction.CHARGE_KI, isKiChargeKeyPressed));
@@ -172,6 +185,13 @@ public class ClientStatsEvents {
 				if (ScouterHUD.getScouterColor() != player.getItemBySlot(EquipmentSlot.HEAD).getItem())
 					ScouterHUD.setScouterColor(player.getItemBySlot(EquipmentSlot.HEAD).getItem());
 			}
+
+			if (!(mc.screen instanceof TrainingScreen)) {
+				if (!data.getTraining().getCurrentTrainingStat().isEmpty()) {
+					data.getTraining().setCurrentTrainingStat("");
+					NetworkHandler.sendToServer(new TrainingRewardC2S(TrainingRewardC2S.TrainStat.NONE, -1));
+				}
+			}
 		});
 	}
 
@@ -181,7 +201,7 @@ public class ClientStatsEvents {
 		if (player == null) return;
 
 		StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(data -> {
-			if (!data.getStatus().hasCreatedCharacter()) return;
+			if (!data.getStatus().isHasCreatedCharacter()) return;
 			boolean isStunned = data.getStatus().isStunned();
 
 			boolean isDashKeyDown = KeyBinds.DASH_KEY.isDown();
@@ -217,6 +237,31 @@ public class ClientStatsEvents {
 	@SubscribeEvent
 	public static void onComputeFovModifier(ComputeFovModifierEvent event) {
 		if (event.getPlayer() instanceof LocalPlayer player) {
+			StatsProvider.get(StatsCapability.INSTANCE, player).ifPresent(data -> {
+				var character = data.getCharacter();
+				var activeForm = character.getActiveFormData();
+				String currentForm = character.getActiveForm();
+				String race = character.getRaceName().toLowerCase();
+
+				var raceConfig = ConfigManager.getRaceCharacter(race);
+				String raceCustomModel = (raceConfig != null && raceConfig.getCustomModel() != null) ? raceConfig.getCustomModel().toLowerCase() : "";
+				String formCustomModel = (character.hasActiveForm() && activeForm != null && activeForm.hasCustomModel())
+						? activeForm.getCustomModel().toLowerCase() : "";
+
+				String logicKey = formCustomModel.isEmpty() ? raceCustomModel : formCustomModel;
+				if (logicKey.isEmpty()) {
+					logicKey = race;
+				}
+
+				boolean isOozaru = logicKey.startsWith("oozaru") ||
+						(race.equals("saiyan") && (Objects.equals(currentForm, SaiyanForms.OOZARU) || Objects.equals(currentForm, SaiyanForms.GOLDEN_OOZARU)));
+
+				if (isOozaru) {
+					float newFov = event.getFovModifier() * 1.5f;
+					event.setNewFovModifier(newFov);
+				}
+			});
+
 			AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
 			if (speedAttr != null) {
 				AttributeModifier formMod = speedAttr.getModifier(StatsEvents.FORM_SPEED_UUID);
@@ -237,5 +282,10 @@ public class ClientStatsEvents {
 				}
 			}
 		}
+	}
+
+	@SubscribeEvent
+	public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+		StatsCapability.clearClientCache();
 	}
 }

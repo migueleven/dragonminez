@@ -4,7 +4,9 @@ import com.dragonminez.common.config.ConfigManager;
 import com.dragonminez.common.config.RaceCharacterConfig;
 import com.dragonminez.common.config.RaceStatsConfig;
 import com.dragonminez.common.quest.QuestData;
+import com.dragonminez.common.quest.sidequest.SideQuestData;
 import com.dragonminez.common.util.TransformationsHelper;
+import lombok.Getter;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -12,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import java.util.Collection;
 import java.util.List;
 
+@Getter
 public class StatsData {
 	private final Player player;
 	private final Stats stats;
@@ -22,10 +25,12 @@ public class StatsData {
 	private final Skills skills;
 	private final Effects effects;
 	private final QuestData questData;
+	private final SideQuestData sideQuestData;
 	private final BonusStats bonusStats;
 	private final Training training;
 
 	private boolean hasInitializedHealth = false;
+	private boolean isDataLoaded = false;
 
 	public StatsData(Player player) {
 		this.player = player;
@@ -39,52 +44,9 @@ public class StatsData {
 		this.skills = new Skills();
 		this.effects = new Effects();
 		this.questData = new QuestData();
+		this.sideQuestData = new SideQuestData();
 		this.bonusStats = new BonusStats();
 		this.training = new Training();
-	}
-
-	public Stats getStats() {
-		return stats;
-	}
-
-	public Status getStatus() {
-		return status;
-	}
-
-	public Cooldowns getCooldowns() {
-		return cooldowns;
-	}
-
-	public Character getCharacter() {
-		return character;
-	}
-
-	public Resources getResources() {
-		return resources;
-	}
-
-	public Skills getSkills() {
-		return skills;
-	}
-
-	public Effects getEffects() {
-		return effects;
-	}
-
-	public QuestData getQuestData() {
-		return questData;
-	}
-
-	public BonusStats getBonusStats() {
-		return bonusStats;
-	}
-
-	public Training getTraining() {
-		return training;
-	}
-
-	public Player getPlayer() {
-		return player;
 	}
 
 	public boolean hasInitializedHealth() {
@@ -217,7 +179,7 @@ public class StatsData {
 		double bonusRes = bonusStats.calculateBonus("RES", stats.getResistance());
 		double armor = player.getArmorValue();
 		double toughness = player.getAttribute(Attributes.ARMOR_TOUGHNESS).getValue();
-		return (stats.getResistance() * defScaling * resMult) + (bonusRes * defScaling) + armor * 0.75 + toughness;
+		return (stats.getResistance() * defScaling * resMult) + (bonusRes * defScaling) + armor * 0.5 + toughness * 0.8;
 	}
 
 	public double getDefense() {
@@ -227,7 +189,7 @@ public class StatsData {
 		double bonusRes = bonusStats.calculateBonus("RES", stats.getResistance());
 		double armor = player.getArmorValue();
 		double toughness = player.getAttribute(Attributes.ARMOR_TOUGHNESS).getValue();
-		return ((stats.getResistance() * defScaling * resMult) + (bonusRes * defScaling) + (armor * 0.75) + toughness) * releaseMultiplier;
+		return ((stats.getResistance() * defScaling * resMult) + (bonusRes * defScaling) + (armor * 0.5) + toughness * 0.8) * releaseMultiplier;
 	}
 
 	public double getTotalMultiplier(String statName) {
@@ -469,7 +431,7 @@ public class StatsData {
 		character.setEye1Color(eye1Color);
 		character.setEye2Color(eye2Color);
 		character.setAuraColor(auraColor);
-		status.setCreatedCharacter(true);
+		status.setHasCreatedCharacter(true);
 
 		RaceStatsConfig raceConfig = ConfigManager.getRaceStats(raceName);
 		RaceStatsConfig.ClassStats classStats = getClassStats(raceConfig, characterClass);
@@ -603,6 +565,7 @@ public class StatsData {
 		nbt.put("Skills", skills.save());
 		nbt.put("Effects", effects.save());
 		nbt.put("QuestData", questData.serializeNBT());
+		nbt.put("SideQuestData", sideQuestData.serializeNBT());
 		nbt.put("BonusStats", bonusStats.save());
 		nbt.put("Training", training.save());
 		nbt.putBoolean("HasInitializedHealth", hasInitializedHealth);
@@ -634,6 +597,9 @@ public class StatsData {
 		if (nbt.contains("QuestData")) {
 			questData.deserializeNBT(nbt.getCompound("QuestData"));
 		}
+		if (nbt.contains("SideQuestData")) {
+			sideQuestData.deserializeNBT(nbt.getCompound("SideQuestData"));
+		}
 		if (nbt.contains("BonusStats")) {
 			bonusStats.load(nbt.getCompound("BonusStats"));
 		}
@@ -643,10 +609,10 @@ public class StatsData {
 		if (nbt.contains("HasInitializedHealth")) {
 			hasInitializedHealth = nbt.getBoolean("HasInitializedHealth");
 		}
-
 		if (character.getRaceName() != null && !character.getRaceName().isEmpty()) {
 			updateTransformationSkillLimits(character.getRaceName());
 		}
+		this.isDataLoaded = true;
 	}
 
 	public void copyFrom(StatsData other) {
@@ -658,12 +624,12 @@ public class StatsData {
 		this.skills.copyFrom(other.skills);
 		this.effects.copyFrom(other.effects);
 		this.questData.deserializeNBT(other.questData.serializeNBT());
+		this.sideQuestData.deserializeNBT(other.sideQuestData.serializeNBT());
 		this.bonusStats.copyFrom(other.bonusStats);
 		this.training.copyFrom(other.training);
 		this.hasInitializedHealth = other.hasInitializedHealth;
-
-		if (character.getRaceName() != null && !character.getRaceName().isEmpty()) {
+		if (character.getRaceName() != null && !character.getRaceName().isEmpty())
 			updateTransformationSkillLimits(character.getRaceName());
-		}
+		this.isDataLoaded = true;
 	}
 }

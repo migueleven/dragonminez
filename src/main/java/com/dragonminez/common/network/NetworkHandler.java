@@ -13,55 +13,55 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
 
-    public static SimpleChannel INSTANCE;
-    private static int packetId = 0;
+	public static SimpleChannel INSTANCE;
+	private static int packetId = 0;
 
-    private static int id() {
-        return packetId++;
-    }
+	private static int id() {
+		return packetId++;
+	}
 
-    public static void register() {
-        SimpleChannel net = NetworkRegistry.ChannelBuilder
-                .named(ResourceLocation.fromNamespaceAndPath(Reference.MOD_ID, "network"))
-                .networkProtocolVersion(() -> "1.0")
-                .clientAcceptedVersions(s -> true)
-                .serverAcceptedVersions(s -> true)
-                .simpleChannel();
+	public static void register() {
+		SimpleChannel net = NetworkRegistry.ChannelBuilder
+				.named(ResourceLocation.fromNamespaceAndPath(Reference.MOD_ID, "network"))
+				.networkProtocolVersion(() -> "1.0")
+				.clientAcceptedVersions(s -> true)
+				.serverAcceptedVersions(s -> true)
+				.simpleChannel();
 
-        INSTANCE = net;
+		INSTANCE = net;
 
 		/*
 		  CLIENT -> SERVER
 		 */
 		net.messageBuilder(CreateCharacterC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(CreateCharacterC2S::decode)
-                .encoder(CreateCharacterC2S::encode)
-                .consumerMainThread(CreateCharacterC2S::handle)
-                .add();
+				.decoder(CreateCharacterC2S::decode)
+				.encoder(CreateCharacterC2S::encode)
+				.consumerMainThread(CreateCharacterC2S::handle)
+				.add();
 
 		net.messageBuilder(UpdateStatC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(UpdateStatC2S::decode)
-                .encoder(UpdateStatC2S::encode)
-                .consumerMainThread(UpdateStatC2S::handle)
-                .add();
+				.decoder(UpdateStatC2S::decode)
+				.encoder(UpdateStatC2S::encode)
+				.consumerMainThread(UpdateStatC2S::handle)
+				.add();
 
 		net.messageBuilder(IncreaseStatC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(IncreaseStatC2S::decode)
-                .encoder(IncreaseStatC2S::encode)
-                .consumerMainThread(IncreaseStatC2S::handle)
-                .add();
+				.decoder(IncreaseStatC2S::decode)
+				.encoder(IncreaseStatC2S::encode)
+				.consumerMainThread(IncreaseStatC2S::handle)
+				.add();
 
 		net.messageBuilder(UpdateSkillC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(UpdateSkillC2S::new)
-                .encoder(UpdateSkillC2S::encode)
-                .consumerMainThread(UpdateSkillC2S::handle)
-                .add();
+				.decoder(UpdateSkillC2S::new)
+				.encoder(UpdateSkillC2S::encode)
+				.consumerMainThread(UpdateSkillC2S::handle)
+				.add();
 
-        net.messageBuilder(StartQuestC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(StartQuestC2S::new)
-                .encoder(StartQuestC2S::encode)
-                .consumerMainThread(StartQuestC2S::handle)
-                .add();
+		net.messageBuilder(StartQuestC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
+				.decoder(StartQuestC2S::new)
+				.encoder(StartQuestC2S::encode)
+				.consumerMainThread(StartQuestC2S::handle)
+				.add();
 
 		net.messageBuilder(ClaimRewardC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
 				.decoder(ClaimRewardC2S::new)
@@ -146,32 +146,68 @@ public class NetworkHandler {
 				.encoder(TrainingRewardC2S::toBytes)
 				.consumerMainThread(TrainingRewardC2S::handle)
 				.add();
-		
+
+		net.messageBuilder(AcceptSideQuestC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
+				.decoder(AcceptSideQuestC2S::new)
+				.encoder(AcceptSideQuestC2S::encode)
+				.consumerMainThread(AcceptSideQuestC2S::handle)
+				.add();
+
+		net.messageBuilder(ClaimSideQuestRewardC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
+				.decoder(ClaimSideQuestRewardC2S::new)
+				.encoder(ClaimSideQuestRewardC2S::encode)
+				.consumerMainThread(ClaimSideQuestRewardC2S::handle)
+				.add();
+
+		net.messageBuilder(TurnInSideQuestC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
+				.decoder(TurnInSideQuestC2S::new)
+				.encoder(TurnInSideQuestC2S::encode)
+				.consumerMainThread(TurnInSideQuestC2S::handle)
+				.add();
+
+		net.messageBuilder(UpdateCharacterC2S.class, id(), NetworkDirection.PLAY_TO_SERVER)
+				.decoder(UpdateCharacterC2S::decode)
+				.encoder(UpdateCharacterC2S::encode)
+				.consumerMainThread(UpdateCharacterC2S::handle)
+				.add();
+
 		/*
 		  SERVER -> CLIENT
 		 */
 		net.messageBuilder(StatsSyncS2C.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .decoder(StatsSyncS2C::decode)
-                .encoder(StatsSyncS2C::encode)
-                .consumerMainThread(StatsSyncS2C::handle)
-                .add();
+				.decoder(StatsSyncS2C::decode)
+				.encoder(StatsSyncS2C::encode)
+				.consumerMainThread(StatsSyncS2C::handle)
+				.add();
 
 		net.messageBuilder(PlayerAnimationsSync.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .decoder(PlayerAnimationsSync::new)
-                .encoder(PlayerAnimationsSync::encode)
-                .consumerMainThread(PlayerAnimationsSync::handle)
-                .add();
+				.decoder(PlayerAnimationsSync::new)
+				.encoder(PlayerAnimationsSync::encode)
+				.consumerMainThread(PlayerAnimationsSync::handle)
+				.add();
 
 		net.messageBuilder(SyncServerConfigS2C.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .decoder(SyncServerConfigS2C::new)
-                .encoder(SyncServerConfigS2C::encode)
-                .consumerMainThread(SyncServerConfigS2C::handle)
-                .add();
+				.decoder(SyncServerConfigS2C::new)
+				.encoder(SyncServerConfigS2C::encode)
+				.consumerMainThread(SyncServerConfigS2C::handle)
+				.add();
 
 		net.messageBuilder(SyncSagasS2C.class, id(), NetworkDirection.PLAY_TO_CLIENT)
 				.decoder(SyncSagasS2C::new)
 				.encoder(SyncSagasS2C::encode)
 				.consumerMainThread(SyncSagasS2C::handle)
+				.add();
+
+		net.messageBuilder(SyncSideQuestsS2C.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+				.decoder(SyncSideQuestsS2C::new)
+				.encoder(SyncSideQuestsS2C::encode)
+				.consumerMainThread(SyncSideQuestsS2C::handle)
+				.add();
+
+		net.messageBuilder(OpenQuestNPCDialogueS2C.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+				.decoder(OpenQuestNPCDialogueS2C::new)
+				.encoder(OpenQuestNPCDialogueS2C::encode)
+				.consumerMainThread(OpenQuestNPCDialogueS2C::handle)
 				.add();
 
 		net.messageBuilder(SyncWishesS2C.class, id(), NetworkDirection.PLAY_TO_CLIENT)
@@ -191,22 +227,28 @@ public class NetworkHandler {
 				.encoder(TriggerAnimationS2C::encode)
 				.consumerMainThread(TriggerAnimationS2C::handle)
 				.add();
-    }
 
-    public static <MSG> void sendToServer(MSG message) {
-        INSTANCE.sendToServer(message);
-    }
+		net.messageBuilder(OpenRecustomizeS2C.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+				.decoder(OpenRecustomizeS2C::new)
+				.encoder(OpenRecustomizeS2C::encode)
+				.consumerMainThread(OpenRecustomizeS2C::handle)
+				.add();
+	}
 
-    public static <MSG> void sendToPlayer(MSG message, ServerPlayer player) {
-        INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), message);
-    }
+	public static <MSG> void sendToServer(MSG message) {
+		INSTANCE.sendToServer(message);
+	}
 
-    public static <MSG> void sendToAllPlayers(MSG message) {
-        INSTANCE.send(PacketDistributor.ALL.noArg(), message);
-    }
+	public static <MSG> void sendToPlayer(MSG message, ServerPlayer player) {
+		INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), message);
+	}
 
-    public static <MSG> void sendToTrackingEntityAndSelf(MSG message, Entity entity) {
-        INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity), message);
-    }
+	public static <MSG> void sendToAllPlayers(MSG message) {
+		INSTANCE.send(PacketDistributor.ALL.noArg(), message);
+	}
+
+	public static <MSG> void sendToTrackingEntityAndSelf(MSG message, Entity entity) {
+		INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity), message);
+	}
 
 }

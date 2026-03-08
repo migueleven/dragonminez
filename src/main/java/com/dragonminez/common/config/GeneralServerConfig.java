@@ -10,7 +10,7 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 public class GeneralServerConfig {
-	public static final int CURRENT_VERSION = 2;
+	public static final int CURRENT_VERSION = 3;
 
 	@Setter
 	private int configVersion;
@@ -47,6 +47,8 @@ public class GeneralServerConfig {
 		private Integer maxStatValue = 10000;
 		private Boolean storyModeEnabled = true;
 		private Boolean createDefaultSagas = true;
+		private Boolean sideQuestsEnabled = true;
+		private Boolean createDefaultSideQuests = true;
 		private Integer senzuCooldownTicks = 240;
 		private Map<String, Float[]> foodRegenerations = createDefaultFoodRegenerations();
 		private Double mightFruitPower = 1.2;
@@ -137,6 +139,7 @@ public class GeneralServerConfig {
 		private Boolean respectAttackCooldown = true;
 		private Boolean enableBlocking = true;
 		private Boolean enableParrying = true;
+		private double effectiveDefenseOnGuardBreak = 0.33;
 		private Boolean enableComboAttacks = true;
 		private Integer comboAttacksCooldownSeconds = 8;
 		private Boolean enablePerfectEvasion = true;
